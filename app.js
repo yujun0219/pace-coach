@@ -16,6 +16,8 @@ const baseline = {
 const state = loadState();
 let isCalculating = false;
 let timerInterval = null;
+const DAY_MS = 86400000;
+const chartColors = ["#ff7417", "#20c986", "#12a7a1", "#28437d", "#e55c50", "#8f6fd8"];
 
 const $ = (selector) => document.querySelector(selector);
 const formatMinutes = (minutes) => {
@@ -33,6 +35,25 @@ const formatTimer = (seconds) => {
   if (hours) return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}`;
   return `${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}`;
 };
+const dateKey = (value = new Date()) => {
+  const date = value instanceof Date ? value : new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+const addDays = (date, amount) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + amount);
+  return next;
+};
+const escapeHtml = (value) =>
+  String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 
 function loadState() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -107,6 +128,84 @@ function getTotals() {
   return { activeTasks, estimate, score };
 }
 
+function getRecordsByDay() {
+  return state.records.reduce((days, record) => {
+    const key = dateKey(record.date);
+    days[key] = (days[key] || 0) + Number(record.actualMinutes || 0);
+    return days;
+  }, {});
+}
+
+function getTodayTimerMinutes() {
+  return state.tasks.reduce((sum, task) => {
+    if (task.recorded) return sum;
+    return sum + getElapsedSeconds(task) / 60;
+  }, 0);
+}
+
+function getTodayFocusMinutes() {
+  const today = dateKey();
+  const recorded = state.records
+    .filter((record) => dateKey(record.date) === today)
+    .reduce((sum, record) => sum + Number(record.actualMinutes || 0), 0);
+  return recorded + getTodayTimerMinutes();
+}
+
+function getTodayPlannedMinutes() {
+  return state.tasks.reduce((sum, task) => sum + estimateTask(task), 0);
+}
+
+function getRecentDayStats(count) {
+  const today = new Date();
+  const recordsByDay = getRecordsByDay();
+  return Array.from({ length: count }, (_, index) => {
+    const date = addDays(today, index - count + 1);
+    const key = dateKey(date);
+    const minutes = (recordsByDay[key] || 0) + (key === dateKey(today) ? getTodayTimerMinutes() : 0);
+    return { key, date, minutes };
+  });
+}
+
+function getRecordStreak() {
+  const recordsByDay = getRecordsByDay();
+  let cursor = new Date();
+  let streak = 0;
+  if (!recordsByDay[dateKey(cursor)] && !getTodayTimerMinutes()) cursor = addDays(cursor, -1);
+  while (recordsByDay[dateKey(cursor)] || (dateKey(cursor) === dateKey() && getTodayTimerMinutes())) {
+    streak += 1;
+    cursor = addDays(cursor, -1);
+  }
+  return streak;
+}
+
+function getTodaySubjectStats() {
+  const subjects = new Map();
+  const today = dateKey();
+  state.tasks.forEach((task) => {
+    const current = subjects.get(task.subject) || { subject: task.subject, planned: 0, actual: 0 };
+    current.planned += estimateTask(task);
+    current.actual += task.recorded ? 0 : getElapsedSeconds(task) / 60;
+    subjects.set(task.subject, current);
+  });
+  state.records
+    .filter((record) => dateKey(record.date) === today)
+    .forEach((record) => {
+      const current = subjects.get(record.subject) || { subject: record.subject, planned: 0, actual: 0 };
+      current.actual += Number(record.actualMinutes || 0);
+      subjects.set(record.subject, current);
+    });
+  return Array.from(subjects.values()).sort((a, b) => b.planned + b.actual - (a.planned + a.actual));
+}
+
+function getRecentSubjectShare() {
+  const cutoff = dateKey(addDays(new Date(), -6));
+  return state.records.reduce((subjects, record) => {
+    if (dateKey(record.date) < cutoff) return subjects;
+    subjects[record.subject] = (subjects[record.subject] || 0) + Number(record.actualMinutes || 0);
+    return subjects;
+  }, {});
+}
+
 function getCoach(score, estimate) {
   if (!estimate) return ["계획 대기", "오늘 할 일을 넣으면 공부량이 현실적인지 바로 계산할게요.", "오늘은 먼저 과목 하나만 넣고 시작해도 좋아요."];
   if (score >= 105) return ["가능", "오늘 계획은 꽤 안정적이에요. 남는 시간은 오답 정리나 휴식으로 남겨둬도 좋아요.", "그대로 가기"];
@@ -169,6 +268,122 @@ function renderToday() {
     `;
     list.appendChild(card);
   });
+}
+
+function renderDashboard() {
+  const todayFocus = getTodayFocusMinutes();
+  const todayPlanned = getTodayPlannedMinutes();
+  const doneCount = state.tasks.filter((task) => task.done).length;
+  const completion = state.tasks.length ? Math.round((doneCount / state.tasks.length) * 100) : 0;
+  const execution = todayPlanned ? Math.round((todayFocus / todayPlanned) * 100) : 0;
+  const weekStats = getRecentDayStats(7);
+  const weekTotal = weekStats.reduce((sum, day) => sum + day.minutes, 0);
+  const streak = getRecordStreak();
+
+  $("#dashboardStats").innerHTML = [
+    ["오늘 집중", formatMinutes(todayFocus), todayPlanned ? `계획 ${formatMinutes(todayPlanned)} 중` : "계획을 넣으면 비교돼요."],
+    ["완료율", `${completion}%`, state.tasks.length ? `${doneCount}/${state.tasks.length}개 완료` : "오늘 계획이 비어 있어요."],
+    ["실행률", todayPlanned ? `${execution}%` : "--", "예상 시간 대비 실제 진행"],
+    ["연속일", `${streak}일`, `최근 7일 ${formatMinutes(weekTotal)}`]
+  ]
+    .map(
+      ([label, value, hint]) => `
+        <article class="metric-card">
+          <span>${label}</span>
+          <strong>${value}</strong>
+          <p>${hint}</p>
+        </article>
+      `
+    )
+    .join("");
+
+  $("#weeklyTrendSummary").textContent = weekTotal
+    ? `이번 주 누적 ${formatMinutes(weekTotal)}, 하루 평균 ${formatMinutes(weekTotal / 7)}`
+    : "기록을 시작하면 주간 흐름이 채워져요.";
+  const maxWeekMinutes = Math.max(...weekStats.map((day) => day.minutes), 60);
+  $("#weekChart").innerHTML = weekStats
+    .map((day) => {
+      const height = Math.max(day.minutes ? 8 : 0, Math.round((day.minutes / maxWeekMinutes) * 100));
+      const label = day.date.toLocaleDateString("ko-KR", { weekday: "short" });
+      return `
+        <div class="week-bar-item">
+          <div class="week-value">${day.minutes ? formatMinutes(day.minutes) : ""}</div>
+          <div class="week-bar-shell">
+            <div class="week-bar" style="height:${height}%"></div>
+          </div>
+          <span>${label}</span>
+        </div>
+      `;
+    })
+    .join("");
+
+  const subjectStats = getTodaySubjectStats();
+  if (!subjectStats.length) {
+    $("#subjectBars").innerHTML = `<div class="empty-state compact">오늘 계획을 추가하면 과목별 비교가 보여요.</div>`;
+  } else {
+    const maxSubjectMinutes = Math.max(...subjectStats.flatMap((item) => [item.planned, item.actual]), 1);
+    $("#subjectBars").innerHTML = subjectStats
+      .slice(0, 5)
+      .map(
+        (item) => `
+          <div class="subject-row">
+            <div class="subject-label">
+              <strong>${escapeHtml(item.subject)}</strong>
+              <span>${formatMinutes(item.actual)} / ${formatMinutes(item.planned)}</span>
+            </div>
+            <div class="compare-lines">
+              <div class="compare-line planned" style="width:${Math.max(3, (item.planned / maxSubjectMinutes) * 100)}%"></div>
+              <div class="compare-line actual" style="width:${Math.max(item.actual ? 3 : 0, (item.actual / maxSubjectMinutes) * 100)}%"></div>
+            </div>
+          </div>
+        `
+      )
+      .join("");
+  }
+
+  const shareEntries = Object.entries(getRecentSubjectShare()).sort((a, b) => b[1] - a[1]);
+  const donut = $("#subjectDonut");
+  const legend = $("#donutLegend");
+  if (!shareEntries.length) {
+    donut.classList.add("empty");
+    donut.style.background = "";
+    legend.innerHTML = `<div class="empty-state compact">최근 기록을 반영하면 비중이 나와요.</div>`;
+  } else {
+    donut.classList.remove("empty");
+    const total = shareEntries.reduce((sum, [, minutes]) => sum + minutes, 0);
+    let cursor = 0;
+    const slices = shareEntries.map(([subject, minutes], index) => {
+      const start = cursor;
+      const end = cursor + (minutes / total) * 100;
+      cursor = end;
+      return `${chartColors[index % chartColors.length]} ${start}% ${end}%`;
+    });
+    donut.style.background = `conic-gradient(${slices.join(", ")})`;
+    legend.innerHTML = shareEntries
+      .slice(0, 6)
+      .map(
+        ([subject, minutes], index) => `
+          <div class="legend-item">
+            <span style="background:${chartColors[index % chartColors.length]}"></span>
+            <strong>${escapeHtml(subject)}</strong>
+            <em>${Math.round((minutes / total) * 100)}%</em>
+          </div>
+        `
+      )
+      .join("");
+  }
+
+  const monthStats = getRecentDayStats(28);
+  $("#consistencyGrid").innerHTML = monthStats
+    .map((day) => {
+      const level = day.minutes >= 180 ? 4 : day.minutes >= 120 ? 3 : day.minutes >= 60 ? 2 : day.minutes > 0 ? 1 : 0;
+      return `
+        <div class="consistency-day level-${level}" title="${day.key} ${formatMinutes(day.minutes)}">
+          <span>${day.date.getDate()}</span>
+        </div>
+      `;
+    })
+    .join("");
 }
 
 function difficultyName(value) {
@@ -269,6 +484,7 @@ function renderBaselines() {
 
 function renderAll() {
   renderToday();
+  renderDashboard();
   renderRecordOptions();
   renderRecords();
   renderInsights();
@@ -298,6 +514,7 @@ function ensureTimerLoop() {
   timerInterval = window.setInterval(() => {
     if (state.tasks.some((task) => task.timerStartedAt)) {
       renderToday();
+      renderDashboard();
       renderRecordOptions();
     }
   }, 1000);

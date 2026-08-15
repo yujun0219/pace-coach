@@ -10,7 +10,7 @@
     <title>스터디핏</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="apple-touch-icon" href="icon.svg">
-    <link rel="stylesheet" href="styles.css?v=5">
+    <link rel="stylesheet" href="styles.css?v=6">
   </head>
   <body>
     <div class="app-shell">
@@ -54,6 +54,58 @@
               </div>
             </div>
           </div>
+
+          <section class="panel dashboard-panel" aria-labelledby="dashboardTitle">
+            <div class="section-head dashboard-head">
+              <div>
+                <h2 id="dashboardTitle">학습 성과</h2>
+                <p>오늘과 최근 흐름을 한눈에 확인해요.</p>
+              </div>
+              <div class="range-chip">최근 7일</div>
+            </div>
+            <div class="metric-grid" id="dashboardStats"></div>
+            <div class="dashboard-grid">
+              <article class="chart-box wide-chart">
+                <div class="chart-head">
+                  <div>
+                    <h3>주간 집중 시간</h3>
+                    <p id="weeklyTrendSummary">기록을 쌓으면 흐름이 보여요.</p>
+                  </div>
+                </div>
+                <div class="week-chart" id="weekChart"></div>
+              </article>
+              <article class="chart-box">
+                <div class="chart-head">
+                  <div>
+                    <h3>오늘 과목별 계획/실적</h3>
+                    <p>예상 시간과 실제 기록을 비교해요.</p>
+                  </div>
+                </div>
+                <div class="subject-bars" id="subjectBars"></div>
+              </article>
+              <article class="chart-box">
+                <div class="chart-head">
+                  <div>
+                    <h3>과목 비중</h3>
+                    <p>최근 기록 기준이에요.</p>
+                  </div>
+                </div>
+                <div class="donut-wrap">
+                  <div class="donut-chart" id="subjectDonut" aria-label="과목별 학습 비중"></div>
+                  <div class="donut-legend" id="donutLegend"></div>
+                </div>
+              </article>
+              <article class="chart-box wide-chart">
+                <div class="chart-head">
+                  <div>
+                    <h3>4주 꾸준함</h3>
+                    <p>짙을수록 오래 집중한 날이에요.</p>
+                  </div>
+                </div>
+                <div class="consistency-grid" id="consistencyGrid"></div>
+              </article>
+            </div>
+          </section>
 
           <section class="panel controls-panel">
             <div class="section-head">
@@ -218,6 +270,6 @@
         </button>
       </nav>
     </div>
-    <script src="app.js?v=5"></script>
+    <script src="app.js?v=6"></script>
   </body>
 </html>
