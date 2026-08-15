@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#12275a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="페이스코치">
+    <title>페이스코치</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <link rel="stylesheet" href="styles.css?v=4">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">개인 공부 페이스 코치</p>
+          <h1>페이스코치</h1>
+        </div>
+        <button class="icon-button" id="installButton" type="button" title="홈 화면에 추가">
+          <span aria-hidden="true">+</span>
+        </button>
+      </header>
+
+      <main>
+        <section class="view active" id="todayView" aria-labelledby="todayTitle">
+          <div class="hero-panel">
+            <div class="hero-copy">
+              <span class="status-pill" id="statusPill">오늘 점검 중</span>
+              <h2 id="todayTitle">오늘 계획의 현실성</h2>
+              <p id="coachLine">가능 시간과 할 일을 넣으면 오늘 감당 가능한 양인지 계산해줄게요.</p>
+            </div>
+            <div class="score-ring" aria-label="현실성 점수">
+              <strong id="scoreValue">--</strong>
+              <span>현실성</span>
+            </div>
+            <div class="progress-track">
+              <div id="progressFill"></div>
+            </div>
+            <div class="hero-stats">
+              <div>
+                <span>가능 시간</span>
+                <strong id="availableStat">0분</strong>
+              </div>
+              <div>
+                <span>예상 소요</span>
+                <strong id="estimateStat">0분</strong>
+              </div>
+              <div>
+                <span>계획 수</span>
+                <strong id="taskCountStat">0개</strong>
+              </div>
+            </div>
+          </div>
+
+          <section class="panel controls-panel">
+            <div class="section-head">
+              <div>
+                <h2>오늘 쓸 수 있는 시간</h2>
+                <p>독서실에서 실제로 집중 가능한 시간만 넣어요.</p>
+              </div>
+            </div>
+            <div class="time-control">
+              <button class="step-button" data-time-step="-30" type="button">-30</button>
+              <label>
+                <span>분</span>
+                <input id="availableMinutes" inputmode="numeric" min="0" max="900" type="number">
+              </label>
+              <button class="step-button" data-time-step="30" type="button">+30</button>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="section-head">
+              <div>
+                <h2>공부 항목 추가</h2>
+                <p>분량을 넣으면 내 기록 기준으로 시간을 예측해요.</p>
+              </div>
+            </div>
+            <form class="task-form" id="taskForm">
+              <label>
+                <span>과목</span>
+                <select id="subjectInput">
+                  <option>수학</option>
+                  <option>영어</option>
+                  <option>국어</option>
+                  <option>과학</option>
+                  <option>사회</option>
+                  <option>한국사</option>
+                </select>
+              </label>
+              <label>
+                <span>단위</span>
+                <select id="unitInput">
+                  <option value="문제">문제</option>
+                  <option value="페이지">페이지</option>
+                  <option value="지문">지문</option>
+                  <option value="강의">강의</option>
+                  <option value="단어">단어</option>
+                </select>
+              </label>
+              <label>
+                <span>분량</span>
+                <input id="amountInput" inputmode="decimal" min="0.5" step="0.5" type="number" value="20">
+              </label>
+              <label>
+                <span>난이도</span>
+                <select id="difficultyInput">
+                  <option value="0.85">쉬움</option>
+                  <option value="1" selected>보통</option>
+                  <option value="1.25">어려움</option>
+                  <option value="1.45">매우 어려움</option>
+                </select>
+              </label>
+              <label class="wide">
+                <span>메모</span>
+                <input id="memoInput" placeholder="예: 미적분 오답, 비문학 3지문" type="text">
+              </label>
+              <button class="primary-button" type="submit">계획에 추가</button>
+            </form>
+          </section>
+
+          <section class="panel">
+            <div class="section-head">
+              <div>
+                <h2>오늘 계획</h2>
+                <p id="taskSummary">아직 계획이 비어 있어요.</p>
+              </div>
+              <button class="ghost-button" id="clearDoneButton" type="button">완료 정리</button>
+            </div>
+            <div class="task-list" id="taskList"></div>
+          </section>
+        </section>
+
+        <section class="view" id="historyView" aria-labelledby="historyTitle">
+          <section class="panel">
+            <div class="section-head">
+              <div>
+                <h2 id="historyTitle">실제 기록 입력</h2>
+                <p>끝난 공부 시간을 넣으면 다음 예측이 더 정확해져요.</p>
+              </div>
+            </div>
+            <form class="record-form" id="recordForm">
+              <label>
+                <span>계획 선택</span>
+                <select id="recordTaskSelect"></select>
+              </label>
+              <label>
+                <span>실제 시간</span>
+                <input id="actualMinutesInput" inputmode="numeric" min="1" type="number" placeholder="분">
+              </label>
+              <button class="primary-button" type="submit">기록 반영</button>
+            </form>
+          </section>
+          <section class="panel">
+            <div class="section-head">
+              <div>
+                <h2>최근 기록</h2>
+                <p>과목별 실제 속도가 여기에 쌓여요.</p>
+              </div>
+            </div>
+            <div class="record-list" id="recordList"></div>
+          </section>
+        </section>
+
+        <section class="view" id="insightView" aria-labelledby="insightTitle">
+          <section class="panel">
+            <div class="section-head">
+              <div>
+                <h2 id="insightTitle">페이스 분석</h2>
+                <p>최근 기록으로 과목별 평균 속도를 보여줘요.</p>
+              </div>
+            </div>
+            <div class="insight-grid" id="insightGrid"></div>
+          </section>
+          <section class="panel coach-panel">
+            <div class="section-head">
+              <div>
+                <h2>코치 메모</h2>
+                <p>계획을 줄일지, 그대로 갈지 판단하는 기준이에요.</p>
+              </div>
+            </div>
+            <div class="coach-notes" id="coachNotes"></div>
+          </section>
+        </section>
+
+        <section class="view" id="settingsView" aria-labelledby="settingsTitle">
+          <section class="panel">
+            <div class="section-head">
+              <div>
+                <h2 id="settingsTitle">기본 속도</h2>
+                <p>기록이 없을 때 쓰는 출발값이에요.</p>
+              </div>
+            </div>
+            <div class="baseline-list" id="baselineList"></div>
+          </section>
+        </section>
+      </main>
+
+      <nav class="tabbar" aria-label="주요 화면">
+        <button class="tab active" data-view="todayView" type="button">
+          <span aria-hidden="true">⌂</span>
+          오늘
+        </button>
+        <button class="tab" data-view="historyView" type="button">
+          <span aria-hidden="true">✓</span>
+          기록
+        </button>
+        <button class="tab" data-view="insightView" type="button">
+          <span aria-hidden="true">◎</span>
+          분석
+        </button>
+        <button class="tab" data-view="settingsView" type="button">
+          <span aria-hidden="true">⚙</span>
+          설정
+        </button>
+      </nav>
+    </div>
+    <script src="app.js?v=4"></script>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "페이스코치",
+  "short_name": "페이스코치",
+  "description": "공부 계획의 현실성을 계산하고 실제 기록으로 예측을 보정하는 개인 코치 앱",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f3f5f8",
+  "theme_color": "#12275a",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
