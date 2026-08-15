@@ -1,6 +1,6 @@
 {
-  "name": "페이스코치",
-  "short_name": "페이스코치",
+  "name": "스터디핏",
+  "short_name": "스터디핏",
   "description": "공부 계획의 현실성을 계산하고 실제 기록으로 예측을 보정하는 개인 코치 앱",
   "start_url": "./index.html",
   "display": "standalone",
